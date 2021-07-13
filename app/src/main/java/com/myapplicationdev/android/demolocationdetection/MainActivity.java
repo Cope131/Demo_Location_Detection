@@ -33,6 +33,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     // Last Location
     private Location lastLocation;
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initLocationComp() {
         // Connect to google play location services
-        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         // Location Request Settings
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
@@ -65,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 .setFastestInterval(5000)
                 .setSmallestDisplacement(100);
         // Listener for Location Updates
-        LocationCallback locationCallback = new LocationCallback() {
+        locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult != null) {
@@ -93,16 +95,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.get_last_location_button:
-                if (lastLocation != null) {
-                    double lat = lastLocation.getLatitude();
-                    double lng = lastLocation.getLongitude();
-                    Log.d(DEBUG_TAG, "Lat: " + lat + " Lang: " + lng);
-                }
+               getLastLocation();
                 break;
             case R.id.get_location_update_button:
+                getLocationUpdate();
                 break;
             case R.id.remove_location_update_button:
-//                break;
+                removeLocationUpdates();
         }
     }
 
@@ -126,5 +125,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    private void getLastLocation() {
+        if (lastLocation != null) {
+            askPermission();
+            double lat = lastLocation.getLatitude();
+            double lng = lastLocation.getLongitude();
+            Log.d(DEBUG_TAG, "Lat: " + lat + " Lang: " + lng);
+            Toast.makeText(this, "Lat: " + lat + " Lang: " + lng, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Location Updates is Disabled", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void removeLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+        Toast.makeText(this, "Location Update Disabled", Toast.LENGTH_SHORT).show();
+        lastLocation = null;
+    }
+
+    private void getLocationUpdate() {
+        initLocationComp();
+        Toast.makeText(this, "Location Update Enabled", Toast.LENGTH_SHORT).show();
     }
 }
