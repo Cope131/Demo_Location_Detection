@@ -21,12 +21,14 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.material.snackbar.Snackbar;
+
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private final String DEBUG_TAG = MainActivity.class.getSimpleName();
     private final int REQUEST_CODE = 101;
-    private final int REQUEST_CODE_2 = 102;
 
     // Views
     private Button getLastLocationBtn, getLocationUpdateBtn, removeLocationUpdateBtn;
@@ -35,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Location lastLocation;
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
+    private boolean isUpdateEnabled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,19 +45,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         initViews();
         askPermission();
-    }
-
-    private void askPermission() {
-        if (!checkPermission()) {
-            ActivityCompat.requestPermissions(
-                    this,
-                    new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
-                    REQUEST_CODE);
-            ActivityCompat.requestPermissions(
-                    this,
-                    new String[] {Manifest.permission.ACCESS_COARSE_LOCATION},
-                    REQUEST_CODE_2);
-        }
     }
 
     private void initLocationComp() {
@@ -72,6 +62,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult != null) {
                     lastLocation = locationResult.getLastLocation();
+                    isUpdateEnabled = true;
+                    Log.d(DEBUG_TAG, "SET TO TRUE");
                 }
             }
         };
@@ -105,6 +97,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void getLastLocation() {
+        String msg = "";
+        if (lastLocation != null) {
+            double lat = lastLocation.getLatitude();
+            double lng = lastLocation.getLongitude();
+            Log.d(DEBUG_TAG, "Lat: " + lat + " Lang: " + lng);
+            msg += "Lat: " + lat + " Lang: " + lng;
+        }
+        msg += isUpdateEnabled ?
+                "\nLocation Update is currently enabled." :
+                "\nLocation Update is currently disabled.";
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
+    private void removeLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+        Toast.makeText(this, "Location Update Disabled", Toast.LENGTH_SHORT).show();
+        isUpdateEnabled = false;
+    }
+
+    private void getLocationUpdate() {
+        initLocationComp();
+        Toast.makeText(this, "Location Update Enabled", Toast.LENGTH_SHORT).show();
+    }
+
+    // --- Permissions ---
+    private void askPermission() {
+        if (!checkPermission()) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[] {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    REQUEST_CODE);
+            return;
+        }
+        initLocationComp();
+    }
+
     private boolean checkPermission() {
         int permissionCheck_Coarse
                 = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
@@ -117,36 +146,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_CODE || requestCode == REQUEST_CODE_2) {
-            if (grantResults.length > 0 &&
-                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        Log.d(DEBUG_TAG, "requestCode: " + requestCode);
+        Log.d(DEBUG_TAG, "permissions: " + Arrays.toString(permissions));
+        Log.d(DEBUG_TAG, "grantResults: " + Arrays.toString(grantResults));
+        if (requestCode == REQUEST_CODE) {
+            // All Permissions Granted
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 initLocationComp();
             }  else {
-                Toast.makeText(MainActivity.this, "Permission not granted", Toast.LENGTH_SHORT).show();
+                Snackbar
+                        .make(findViewById(android.R.id.content), "Location Permission was not granted",
+                                Snackbar.LENGTH_INDEFINITE)
+                        .setAction("View", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                askPermission();
+                            }
+                        })
+                        .show();
             }
         }
-    }
-
-    private void getLastLocation() {
-        if (lastLocation != null) {
-            askPermission();
-            double lat = lastLocation.getLatitude();
-            double lng = lastLocation.getLongitude();
-            Log.d(DEBUG_TAG, "Lat: " + lat + " Lang: " + lng);
-            Toast.makeText(this, "Lat: " + lat + " Lang: " + lng, Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Location Updates is Disabled", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void removeLocationUpdates() {
-        fusedLocationClient.removeLocationUpdates(locationCallback);
-        Toast.makeText(this, "Location Update Disabled", Toast.LENGTH_SHORT).show();
-        lastLocation = null;
-    }
-
-    private void getLocationUpdate() {
-        initLocationComp();
-        Toast.makeText(this, "Location Update Enabled", Toast.LENGTH_SHORT).show();
     }
 }
